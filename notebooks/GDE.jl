@@ -226,7 +226,7 @@ __Volumetric__ charge transfer reactions $R_{\text{CT},j}$ occur in the CL.
 
 ```math
 \begin{aligned}
-\nabla\cdot \vec N_j &= - R_{\text{CT},j} \\
+\nabla\cdot \vec N_j - R_{\text{CT},j} &= 0 \\
 
 \vec N_j &= - \rho_{\text{l}} \left( D^{\text{eff}}_j \vec\nabla\omega_j - \omega_j  z_j u_j F \vec \nabla \phi_{\text{l}}  \right) \\
 
@@ -236,14 +236,9 @@ R_{\text{CT},j} &= M_j a_{\text{v}} \sum_k \nu_{j,k} \frac{I_k}{n_k F}
 ```
 """
 
-# ╔═╡ b522b245-be17-444c-92eb-bc1c64e59706
+# ╔═╡ e04e6429-8910-4bd1-8f8c-45e24b77fa93
 md"""
-
-## Charge transfer reaction
-In the simplified case only consider the CO evolution reaction:
-```math
-CO_2 + H_2O + 2 e^-\rightarrow CO + 2 OH^-
-```
+# Problem defintion and solution
 """
 
 # ╔═╡ 393f5b04-9368-4fb0-a64a-de3a41410fcf
@@ -258,18 +253,11 @@ begin
 	const iϕl=iϕs+1
 end;
 
-# ╔═╡ d857b437-e639-45bb-a64c-b3153eb12f53
-# charge transfer reaction rate
-function R_CT(u, data::ModelData)
- 
-	# current density of CT reaction, mA cm-2, reaction rate limited by availability of reactant CO2
-	rr=500*ufac"mA/cm^2"*u[3]
-	
-	
-	# species mass flux from CT reaction, eq. (26)
-	@. data.Mg*data.nug*data.av*rr/data.nCT/data.F
-	
-end
+# ╔═╡ 4c4d0dfe-c907-4033-9b5c-c7ab712fd261
+md"""
+## Physics
+Physics functions and boundary conditions that define the problem in the format expected by the VoronoiFVM.jl package.
+"""
 
 # ╔═╡ fe3e0095-31b8-4921-ab1a-da4cb42b9302
 function flux(f,u,edge,data)
@@ -315,19 +303,26 @@ function flux(f,u,edge,data)
 
 end
 
-# ╔═╡ 97879adc-8493-4b51-9071-82c7d5151d01
-function bcond(f,u,bnode,data)
-	
-	boundary_dirichlet!(f,u,bnode,1,Γ_DM_GC,0.01) # CO
-	boundary_dirichlet!(f,u,bnode,2,Γ_DM_GC,0.01) # H2
+# ╔═╡ b522b245-be17-444c-92eb-bc1c64e59706
+md"""
 
-	for i=iion:(iion+nion-1) # define bc for all ion species
-		boundary_dirichlet!(f,u,bnode,i,Γ_EL_CL,1)
-	end
-	boundary_dirichlet!(f,u,bnode,iϕs,Γ_DM_GC,1) # spec, boundary(left), value
-	boundary_dirichlet!(f,u,bnode,iϕl,Γ_EL_CL,1)
-	
+### Charge transfer reaction
+In the simplified case only consider a single charge transfer reachtion, that both creates H2 and CO and consumes CO2:
+```math
+CO_2 \rightarrow CO + H2
+```
 
+This is for initial testing only.
+"""
+
+# ╔═╡ d857b437-e639-45bb-a64c-b3153eb12f53
+function R_CT(u, data::ModelData)
+ 
+	# current density of CT reaction, mA cm-2, reaction rate limited by availability of reactant CO2
+	rr=500*ufac"mA/cm^2"*u[3]	
+	
+	# species mass flux from CT reaction, eq. (26)
+	@. data.Mg*data.nug*data.av*rr/data.nCT/data.F	
 end
 
 # ╔═╡ 5d7eb635-14cb-46df-9b6c-4c402596889e
@@ -342,17 +337,37 @@ function reaction(f,u,node,data)
 	end
 	
 	# mole/mass fractions sum to 1 for last species nspec
-	#f[nspec]=sum(u[1:nspec])-1
-	
+	#f[nspec]=sum(u[1:nspec])-1	
 	f[ngas]=log(sum(u[1:ngas]))
 end
+
+# ╔═╡ 86d8330c-8f71-48a7-8037-ea3a163f911f
+md"""
+## Boundary conditions
+"""
+
+# ╔═╡ 97879adc-8493-4b51-9071-82c7d5151d01
+function bcond(f,u,bnode,data)	
+	boundary_dirichlet!(f,u,bnode,1,Γ_DM_GC,0.01) # CO
+	boundary_dirichlet!(f,u,bnode,2,Γ_DM_GC,0.01) # H2
+
+	for i=iion:(iion+nion-1) # define bc for all ion species
+		boundary_dirichlet!(f,u,bnode,i,Γ_EL_CL,1)
+	end
+	boundary_dirichlet!(f,u,bnode,iϕs,Γ_DM_GC,1) # spec, boundary(left), value
+	boundary_dirichlet!(f,u,bnode,iϕl,Γ_EL_CL,1)
+end
+
+# ╔═╡ 7b01d144-b708-402a-82fe-a81b637e2334
+md"""
+## Compile and solve
+"""
 
 # ╔═╡ 428a8c4a-9786-44a7-89be-9c2954f8a5d9
 grid=grid2(L_CL=50*ufac"μm",nref=0)
 
 # ╔═╡ 1e957121-f698-481b-86dc-b61bd1b7f874
 begin
-	# create system + solution
 	sys=VoronoiFVM.System( 	grid;
 							data=ModelData(),
 							flux=flux,
@@ -363,7 +378,6 @@ begin
 	enable_species!(sys; species=collect(iion:(iion+nion-1)), regions=[1])
 	enable_species!(sys; species=[iϕs], regions=[1,2])
 	enable_species!(sys; species=[iϕl], regions=[1])
-
 	
 	inival=unknowns(sys)
 	inival[:,:].=1
@@ -425,12 +439,16 @@ end
 # ╟─b03473a8-bda9-421d-a318-5073ab8a8a34
 # ╟─01da1e64-e500-4d6b-9102-9de56aa874a9
 # ╟─021fa393-10aa-4339-bf90-6e818e46b299
-# ╟─b522b245-be17-444c-92eb-bc1c64e59706
+# ╟─e04e6429-8910-4bd1-8f8c-45e24b77fa93
 # ╠═393f5b04-9368-4fb0-a64a-de3a41410fcf
-# ╠═d857b437-e639-45bb-a64c-b3153eb12f53
+# ╟─4c4d0dfe-c907-4033-9b5c-c7ab712fd261
 # ╠═fe3e0095-31b8-4921-ab1a-da4cb42b9302
-# ╠═97879adc-8493-4b51-9071-82c7d5151d01
+# ╟─b522b245-be17-444c-92eb-bc1c64e59706
+# ╠═d857b437-e639-45bb-a64c-b3153eb12f53
 # ╠═5d7eb635-14cb-46df-9b6c-4c402596889e
+# ╟─86d8330c-8f71-48a7-8037-ea3a163f911f
+# ╠═97879adc-8493-4b51-9071-82c7d5151d01
+# ╟─7b01d144-b708-402a-82fe-a81b637e2334
 # ╠═1e957121-f698-481b-86dc-b61bd1b7f874
 # ╠═3f938444-c12d-4853-9eab-6658924fed1f
 # ╠═25bdfa94-e0b4-408e-b690-decf383eba2e
