@@ -1,0 +1,13 @@
+name = "GasDiffusionElectrodes"
+uuid = "4cd4081d-94ab-4a86-8ebb-c4938a85b0f2"
+authors = ["Brust", "David <david.brust@dlr.de> and contributors"]
+version = "0.1.0"
+
+[compat]
+julia = "1"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test"]
