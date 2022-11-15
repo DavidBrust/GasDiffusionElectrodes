@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.19.13
+# v0.19.14
 
 using Markdown
 using InteractiveUtils
@@ -411,6 +411,7 @@ let
 	cols=range(c1, stop=c2, length=ngas)
 
 	for i in 1:ngas
+	#for i in [1,3]
 		scalarplot!(vis[1,1], grid, sol[i,:], color=cols[i], label="$(ModelData().gn[i])", clear=false, legend=:ct)
 	end
 
