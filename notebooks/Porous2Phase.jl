@@ -151,7 +151,7 @@ md"""
 md"""
 The water saturation (fraction of pore space occupied by liquid water) is a function of capillary pressure.
 
-Below is an exemplary saturation curve used herein. The relationship must be measured experimentally for the materials used in the electrolyser system. (hydrophobic, carbon based gas diffusion medium)
+Below is an exemplary saturation curve used herein. __This curve describes the wettability properties of the porous medium.__ The relationship must be measured experimentally for the materials used in the electrolyser system. (hydrophobic, carbon based gas diffusion medium)
 """
 
 # ╔═╡ 06b2b42c-f45f-4c01-a220-cf8287d93184
@@ -241,17 +241,28 @@ The transport equation for each species $\alpha$ ($\alpha$ = CO, CO2, H2, H2O ..
 # ╔═╡ 362b9cfc-2de0-4fb3-9110-408f6ab0fb45
 md"""
 ```math
-\begin{align}
-\nabla \cdot \mathbf{J}_{\alpha} &= R_{\alpha}
+\nabla \cdot \mathbf{J}_{\alpha} = R_{\alpha}
 ~,
 \alpha = 1 ... N
-\end{align}
 ```
 """
 
 # ╔═╡ dd21d46b-8d8a-443f-9e22-d2cf95fe5107
 md"""
 With species molar fluxes $J_{\alpha}$ in units of $\frac{\text{mol}}{\text{m}^2 \text{s}}$ and species source terms $R_{\alpha}$ from chemical reactions or phase transitions in units of $\frac{\text{mol}}{\text{m}^3 \text{s}}$.
+"""
+
+# ╔═╡ eee8e226-b928-4468-af11-37a55108b35a
+md"""
+The influence of the liquid water phase on the transport of gas phase species can be incorporated via the relative permeability:
+"""
+
+# ╔═╡ 932d34bc-bf11-425c-8f9c-e9c516bcc730
+md"""
+```math
+\nabla \cdot \left( k_{\text f} k_{\text{rg}} \mathbf{J}_{\alpha} \right) = R_{\alpha}
+
+```
 """
 
 # ╔═╡ c4e08410-3d1a-4921-aa5c-2f232daaa07a
@@ -285,7 +296,7 @@ J_N = -\sum_{\alpha=1}^{N-1} J_{\alpha}.
 
 # ╔═╡ 8528e15f-cce7-44d7-ac17-432f92cc5f53
 md"""
-Here we look at ideal gas species at constant temperature $T$. The driving force for transport of species $\alpha$ relative to the other species then is $\nabla p_{\alpha}$. The force-flux relations read
+Here we look at ideal gas species at constant temperature $T$. The driving force for transport of species $\alpha$ relative to the other species then is $\nabla p_{\alpha}$. The force-flux relations (without influence of liquid water phase on gas phase transport) read:
 """
 
 # ╔═╡ 19a46c60-d7b5-45da-a3c5-3687316b2a2c
@@ -300,7 +311,7 @@ md"""
 
 # ╔═╡ d5987ad8-e71b-4d40-b1c1-88142558265d
 md"""
-In the follwing, equation numbers refer to R. Taylor and R. Krishna, Multicomponent mass transfer.
+Equation numbers refer to R. Taylor and R. Krishna, Multicomponent mass transfer.
 The coefficients $M_{\alpha \alpha}$ and $M_{\alpha \beta}$ are defined by (2.1.21, 2.1.22):
 
 """
@@ -731,6 +742,8 @@ end
 # ╟─3703afb0-93c4-4664-affe-b723758fb56b
 # ╟─362b9cfc-2de0-4fb3-9110-408f6ab0fb45
 # ╟─dd21d46b-8d8a-443f-9e22-d2cf95fe5107
+# ╟─eee8e226-b928-4468-af11-37a55108b35a
+# ╟─932d34bc-bf11-425c-8f9c-e9c516bcc730
 # ╟─c4e08410-3d1a-4921-aa5c-2f232daaa07a
 # ╟─649940bd-faa8-4b95-bf62-d82f06935c64
 # ╟─313cd88a-1497-4d3a-b09a-9b98a6dad9c2
