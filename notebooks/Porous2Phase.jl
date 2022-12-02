@@ -167,6 +167,19 @@ function sat_eff(pc, data)
 	end	
 end;
 
+# ╔═╡ 182e4a27-03c7-43e3-9b22-4a8a0482da72
+let
+	x = collect(range(-2,2,length=101))
+	#y = @. sat_eff(x*ufac"bar", ModelData())
+	p = plot(xlabel="Capillary pressure / bar", ylabel="Water saturation / -", axisfontsize=16, tickfontsize=16, limits=(0,1), legend=:rt)
+	αs = collect((1:2:9)*1.0e-5)
+	for α in αs
+		y = [sat_eff(x_*ufac"bar", (α=α, p12=0.0)) for x_ in x]
+		plot!(p, x,y, label="α=$(α)")
+	end
+	p
+end
+
 # ╔═╡ f922d570-9564-4122-bfd7-3224c17b4188
 md"""
 The effective relative permeability $k_{\text{rg/w}}$, governs the proportionality between volume flux and driving pressure gradient of fluid flow through porous media (Darcy law).
@@ -524,13 +537,6 @@ F::Float64 = ph"e"*ph"N_A"
 R::Float64 = ph"k_B"*ph"N_A"
 end
 
-# ╔═╡ 182e4a27-03c7-43e3-9b22-4a8a0482da72
-let
-	x = collect(range(-2,2,length=101))
-	y = @. sat_eff(x*ufac"bar", ModelData())
-	plot(x,y, xlabel="Capillary pressure / bar", ylabel="Water saturation / -", axisfontsize=16, tickfontsize=16, limits=(0,1))
-end
-
 # ╔═╡ 3f643eb7-ff5f-4e88-8a57-5c559687ad1b
 begin
 	const ngas=ModelData().ng
@@ -550,9 +556,9 @@ end;
 # ╔═╡ 29d66705-3d9f-40b1-866d-dd3392a1a268
 function bcond(f,u,bnode,data)
 	# gas phase
-	boundary_dirichlet!(f,u,bnode,1,Γ_DM_GC,0.5*data.p_amb) # p_CO
+	boundary_dirichlet!(f,u,bnode,1,Γ_DM_GC,0.0*data.p_amb) # p_CO
 	boundary_dirichlet!(f,u,bnode,2,Γ_DM_GC,0.0*data.p_amb) # p_H2
-	boundary_dirichlet!(f,u,bnode,3,Γ_DM_GC,0.5*data.p_amb) # p_CO2
+	boundary_dirichlet!(f,u,bnode,3,Γ_DM_GC,1.0*data.p_amb) # p_CO2
 	boundary_dirichlet!(f,u,bnode,4,Γ_DM_GC,0.0*data.p_amb) # N2
 
 	# liquid water
@@ -727,8 +733,8 @@ end
 # ╟─a0f452b6-5ca4-40aa-b29a-d8d82fcdbc58
 # ╟─34000852-34bd-4bb9-a21c-b7960df63cda
 # ╟─75d8a575-9899-4110-b34c-3889e1266809
-# ╟─182e4a27-03c7-43e3-9b22-4a8a0482da72
-# ╟─06b2b42c-f45f-4c01-a220-cf8287d93184
+# ╠═182e4a27-03c7-43e3-9b22-4a8a0482da72
+# ╠═06b2b42c-f45f-4c01-a220-cf8287d93184
 # ╟─f922d570-9564-4122-bfd7-3224c17b4188
 # ╟─42e49d99-e68b-44a6-9ed5-ed96b9c84dc4
 # ╟─2a860dc8-c798-4d27-8bc7-4d0e40cbe62f
