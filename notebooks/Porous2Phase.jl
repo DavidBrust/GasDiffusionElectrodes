@@ -158,7 +158,7 @@ Below is an exemplary saturation curve used herein. __This curve describes the w
 # effective saturation (liquid water phase)
 function sat_eff(pc, data)
 	B_prime(x) = -(exp(x)*(x-1)+1)/(exp(x)-1)^2	
-	δpc = pc-data.p12	
+	#δpc = pc-data.p12	
 	se = -B_prime(data.α*(pc-data.p12))
 	if isnan(se)
 		return 0.5
@@ -194,14 +194,37 @@ md"""
 
 # ╔═╡ 2a860dc8-c798-4d27-8bc7-4d0e40cbe62f
 md"""
-It is a function of phase saturation.
+The relative permeability $k_{\text{rg/w}}$ is a function of phase saturation. For numerical stability, an additional __residual permeability__ parameter $k_{\text{res}}$, one for each phase, is introduced which regularizes the equations (prevents the relative permeabilities from vanishing)
+
+Without the residual permeability parameter, situations could arise where relative permeabilities can become zero. Depending on the choice of the saturation parameter $\alpha$, constant saturation (e.g. complete water saturation) could occur in part of the domain, leading to relative permeabilities of zero which in turn leads to vanishing equations.
 """
 
 # ╔═╡ e8755eed-0d23-45f2-b7ac-1e33e772fd95
 md"""
+Liquid water phase relative permeability:
 ```math
-	k_{\text{rg/w}} = k_{\text{rg/w}}(S_{\text{g/w}})
+	k_{\text{r,w}} = k_{\text{res,w}} + (1-k_{\text{res,w}}) S_{\text{w}}^{\gamma}
 ```
+"""
+
+# ╔═╡ 194c9e3e-4e84-4f9e-bc28-624c1959dcf9
+md"""
+Gas phase relative permeability:
+```math
+	k_{\text{r,g}} = k_{\text{res,g}} + (1-k_{\text{res,g}}) (1-S_{\text{w}}^{\gamma})
+```
+"""
+
+# ╔═╡ e8572b3b-3527-43e6-8f37-603674570667
+function kr(se,data)
+	krw = data.kres_w + (1.0-data.kres_w) * se^data.γw # liquid water phase w
+	krg = data.kres_g + (1.0-data.kres_g) * (1-se^data.γw) # gas phase g
+	krg,krw
+end
+
+# ╔═╡ cdbe0982-0e0a-4f3c-b3ad-618dc27c0ed4
+md"""
+A consequence of the residual permeability parameter discussed above is that the relative permeability for either phase does not vanish. To see this zoom into the graph.
 """
 
 # ╔═╡ eab9ff54-9322-4794-b0a9-de9ac11d78f2
@@ -405,9 +428,6 @@ md"""
 ## Solver Setup
 """
 
-# ╔═╡ 76f49273-d67e-4384-846d-8a9f920ac07d
-krw(se,data) = se^data.γw
-
 # ╔═╡ ec327c35-528a-43b1-b618-a51a85c3b3f5
 md"""
 ## Mole Balance Check
@@ -521,7 +541,7 @@ av::Float64 	= 1.5e7*ufac"1/m"
 
 # quatities for saturation curve
 # saturation parameter
-α::Float64 		= 3.0e-5*ufac"1/m"
+α::Float64 		= 5.0e-5*ufac"1/m"
 # sturation curve shift
 p12::Float64 	= 0.0*ufac"Pa"
 # wettable phase permeability exponent
@@ -529,12 +549,37 @@ p12::Float64 	= 0.0*ufac"Pa"
 
 # hydraulic permiability
 kf::Float64 	= 5e-19*ufac"m^2"
-#kf::Float64 	= 1.0e-6*ufac"m^2"
+# residual permeabilities for liquid water and gas phases
+kres_w::Float64 	= 1.0e-3
+kres_g::Float64 	= 1.0e-3
 
 # physical constants
 e::Float64 = ph"e"
 F::Float64 = ph"e"*ph"N_A"
 R::Float64 = ph"k_B"*ph"N_A"
+end
+
+# ╔═╡ d671f4ca-aa56-481e-b8e5-41f2561feb53
+let
+	l=101
+	x = collect(range(-2,2,length=l))
+	krg = zeros(Float64, l)
+	krw = zeros(Float64, l)
+	
+	pg = plot(xlabel="Capillary pressure / bar", ylabel="Gas phase Relative permeability / -", axisfontsize=16, tickfontsize=16, limits=(0,1), legend=:none)
+
+	pw = plot(xlabel="Capillary pressure / bar", ylabel="Liq. water phase Relative permeability / -", axisfontsize=16, tickfontsize=16, limits=(0,1), legend=:none)
+	
+	αs = collect((1:2:9)*1.0e-5)
+	for α in αs
+		se = [sat_eff(x_*ufac"bar", (α=α, p12=0.0)) for x_ in x]
+		for (i,se) in enumerate(se)
+			krg[i], krw[i] = kr(se,ModelData())
+		end
+		plot!(pg, x,krg, label="α=$(α)")
+		plot!(pw, x,krw, label="α=$(α)")
+	end
+	pg, pw
 end
 
 # ╔═╡ 3f643eb7-ff5f-4e88-8a57-5c559687ad1b
@@ -597,12 +642,17 @@ function flux(f,u,edge,data)
 	#f[1:(ngas-1)] = J
 	
 	# relative permeability considers pore blocking by liquid water phase
-	krg = (1-se)
+
+	krg, krw = kr(se,data)
+	#krg = (1-se)
+	#krw(se,data) = se^data.γw
+	
 	f[1:(ngas-1)] = J * krg
 
-	krw(se,data) = se^data.γw
+	
 	# liquid water flux
-	f[iw] = data.ρw/data.Mw/data.μw*data.kf*krw(se,data)*(u[iw,1]-u[iw,2])
+	#f[iw] = data.ρw/data.Mw/data.μw*data.kf*krw(se,data)*(u[iw,1]-u[iw,2])
+	f[iw] = data.ρw/data.Mw/data.μw*data.kf*krw*(u[iw,1]-u[iw,2])
 
 	#f[n] = - sum(J)
 	#f[end] via reaction: 
@@ -686,7 +736,6 @@ let
 	se = @. sat_eff(pc, ModelData())
 	
 	scalarplot!(vis, grid, se, label="water saturation", limits=(0,1), legend=:ct)
-	se
 	reveal(vis)
 end
 
@@ -739,6 +788,10 @@ end
 # ╟─42e49d99-e68b-44a6-9ed5-ed96b9c84dc4
 # ╟─2a860dc8-c798-4d27-8bc7-4d0e40cbe62f
 # ╟─e8755eed-0d23-45f2-b7ac-1e33e772fd95
+# ╟─194c9e3e-4e84-4f9e-bc28-624c1959dcf9
+# ╠═e8572b3b-3527-43e6-8f37-603674570667
+# ╟─cdbe0982-0e0a-4f3c-b3ad-618dc27c0ed4
+# ╟─d671f4ca-aa56-481e-b8e5-41f2561feb53
 # ╟─eab9ff54-9322-4794-b0a9-de9ac11d78f2
 # ╟─17593695-c27f-42b3-b326-cb3fb0242f20
 # ╟─5cf89fb0-1370-4600-9bbf-a10aaf49adfa
@@ -773,7 +826,6 @@ end
 # ╠═ed7941c4-0485-4d84-ad5b-383eb5cae70a
 # ╠═78cf4646-c373-4688-b1ac-92ed5f922e3c
 # ╠═71e05017-adb5-430f-8477-10b62eff8ba7
-# ╠═76f49273-d67e-4384-846d-8a9f920ac07d
 # ╟─ec327c35-528a-43b1-b618-a51a85c3b3f5
 # ╠═11979bc8-5c15-458e-a408-94f73f6d4a89
 # ╠═c76159c7-aed5-44a4-9591-0d0a945ea2fe
