@@ -632,7 +632,7 @@ function flux(f,u,edge,data)
 	# total gas pressure
 	pt = sum(um[1:ngas])
 	yαm = [yα(um[1:ngas],α) for α in 1:ngas] # gas phase species mole fractions
-	J = M_matrix(yαm,data) \ F
+	J = -M_matrix(yαm,data) \ F
 
 	
 	pc = pt - um[iw] # capillary pressure
@@ -675,7 +675,8 @@ function reaction(f,u,node,data)
 	if node.region == 1
 		rr=R_CT(u,data)
 		for i=1:(ngas-1)
-			f[i]=rr[i]
+			# reaction term is on the left hand side, source term < 0, sink > 0
+			f[i]=-rr[i] 
 		end
 	end
 	
